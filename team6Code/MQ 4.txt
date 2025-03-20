@@ -1,0 +1,53 @@
+#include <ESP8266WiFi.h>
+
+String apiKey = "SKP9YQY2CFVNK919"; // Enter your Write API key from ThingSpeak
+const char *ssid = "The Robotics Club"; // Replace with your Wi-Fi SSID
+const char *pass = "trcsnist@2022"; // Replace with your Wi-Fi password
+const char *server = "api.thingspeak.com";
+WiFiClient client;
+
+void setup() {
+  Serial.begin(115200);
+  delay(10);
+  Serial.println("Connecting to WiFi: " + String(ssid));
+
+  WiFi.begin(ssid, pass);
+  while (WiFi.waitForConnectResult() != WL_CONNECTED) {
+    Serial.print(".");
+    delay(500);
+  }
+
+  Serial.println("");
+  Serial.println("WiFi connected");
+}
+
+void loop() {
+  int mq4Value = analogRead(A0);
+
+  if (mq4Value < 0 || mq4Value > 1023) {
+    Serial.println("Invalid reading from MQ-4 sensor!");
+    return;
+  }
+
+  if (client.connect(server, 80)) {
+    String postStr = "field1=" + String(mq4Value); // You may need to calibrate this value
+
+    client.print("POST /update HTTP/1.1\n");
+    client.print("Host: api.thingspeak.com\n");
+    client.print("Connection: close\n");
+    client.print("X-THINGSPEAKAPIKEY: " + apiKey + "\n");
+    client.print("Content-Type: application/x-www-form-urlencoded\n");
+    client.print("Content-Length: ");
+    client.print(postStr.length());
+    client.print("\n\n");
+    client.print(postStr);
+
+    Serial.print("MQ-4 Sensor Value: ");
+    Serial.println(mq4Value);
+    Serial.println("Data sent to ThingSpeak");
+  }
+  client.stop();
+
+  // Wait for at least 15 seconds before sending the next update
+  delay(15000);
+}
